@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 // Super Mario Bros
 // (Ported from http://www.portal42.net/mario.txt)
@@ -38,7 +39,9 @@ var music = new List<Sound> {
     new Silence(625),
 };
 
-music.ForEach(s => s.Play());
+var info = new ProcessStartInfo("play", "-n " + string.Join(" : ", music.Select(x => x.ToString())));
+var result = Process.Start(info);
+result?.WaitForExit(music.Sum(x => x.Duration) + 500);
 
 Console.Write(
     @"
@@ -66,31 +69,15 @@ ____▒▒▒▒▒
 // data structures for sounds
 public abstract record Sound(int Duration = 125)
 {
-    public abstract void Play();
+    protected double Length => TimeSpan.FromMilliseconds(Duration).TotalSeconds;
 }
 
 public record Silence(int Duration = 125) : Sound(Duration)
 {
-    public override void Play()
-    {
-        var length = TimeSpan.FromMilliseconds(Duration).TotalSeconds;
-        var info = new ProcessStartInfo("play",
-            $"-n synth {length} sine 0") {RedirectStandardOutput = true};
-        var result = Process.Start(info);
-        result?.WaitForExit(Duration);
-    }
+    public override string ToString() => $"synth {Length} sine 0";
 }
 
 public record Tone(int Frequency, int Duration = 125) : Sound(Duration)
 {
-    public override void Play()
-    {
-        var length = TimeSpan.FromMilliseconds(Duration).TotalSeconds;
-        var info = new ProcessStartInfo("play",
-            $"-n synth {length} sine {Frequency}") {
-            RedirectStandardOutput = true
-        };
-        var result = Process.Start(info);
-        result?.WaitForExit(Duration);
-    }
+    public override string ToString() => $"synth {Length} sine {Frequency}";
 }
